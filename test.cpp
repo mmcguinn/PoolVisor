@@ -5,6 +5,8 @@
 
 using namespace cv;
 
+//g++ -o PoolVisor test.cpp  `pkg-config --cflags --libs opencv`
+
 void showHistogram(Mat& img);
 
 int main(int argc, char* argv[])
