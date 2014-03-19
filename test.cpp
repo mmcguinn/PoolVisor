@@ -2,149 +2,258 @@
 #include <highgui.h>
 #include <math.h>
 #include <iostream>
+#include <fstream>
+#include <string>
+#include <map>
 
 using namespace cv;
+using namespace std;
 
 //g++ -o PoolVisor test.cpp  `pkg-config --cflags --libs opencv`
 
-void showHistogram(Mat& img);
+int colorThreshold(Mat src, Mat dst, Scalar low, Scalar high)
+{
+    bool wrap = low.val[0] > high.val[0];
+    int ret = 0;
+
+    for(int row = 0; row < src.rows; ++row) 
+    {
+        uchar * p_src = src.ptr<uchar>(row);
+        uchar * p_dst = dst.ptr<uchar>(row);
+        for (int col = 0; col < src.cols; ++col) 
+        {
+            int srcH = *p_src++;
+            int srcS = *p_src++;
+            int srcV = *p_src++;
+
+            int clr = 0;
+            
+            if (wrap)
+            {
+              if((srcH >= low.val[0] || srcH <= high.val[0]) &&
+                  srcS >= low.val[1] && srcS <= high.val[1] &&
+                  srcV >= low.val[2] && srcV <= high.val[2]) 
+              {
+                  clr = 255;
+                  ret++;
+              }
+            }
+            else if(srcH >= low.val[0] && srcH <= high.val[0] &&
+                    srcS >= low.val[1] && srcS <= high.val[1] &&
+                    srcV >= low.val[2] && srcV <= high.val[2]) 
+            {
+                clr = 255;
+                ret++;
+            }
+              
+            *p_dst++ = clr;
+        }
+    }
+    
+    return ret;
+}
+
+class ColorFilter
+{
+private:
+  Scalar m_low, m_high;
+public:
+  ColorFilter() {}
+  ColorFilter(Scalar low, Scalar high)
+  {
+    m_low = low;
+    m_high = high;
+  }
+  
+  static map<string, ColorFilter> load(string filename)
+  {
+    ifstream input(filename.c_str(), ifstream::in);
+    
+    map<string, ColorFilter> result;
+    string name, dc;
+    int h1,s1,v1,h2,s2,v2, rotation;
+    
+    while (input.good())
+    {
+      input >> name >> h1 >> s1 >> v1 >> dc >> h2 >> s2 >> v2;
+      result[name] = ColorFilter(Scalar(h1,s1,v1), Scalar(h2,s2,v2));
+    }
+    
+    return result;
+  }
+  
+  Mat makeMask(Mat input, bool invert = false)
+  {
+    Mat result = Mat::zeros( input.rows, input.cols, CV_8UC1 );
+    
+    colorThreshold(input, result, m_low, m_high);
+                   
+    if (invert)
+    {
+        bitwise_not(result, result);
+    }
+    
+    return result;
+  }
+  
+  int countMask(Mat input)
+  {
+    Mat result = Mat::zeros( input.rows, input.cols, CV_8UC1 );
+    
+    return colorThreshold(input, result, m_low, m_high);
+  }
+  
+  void test()
+  {
+    cout << m_low << "==" << m_high << endl;
+  }
+};
+
+int h1,s1,v1,h2,s2,v2;
+
+void updateTest(int, void*)
+{
+  Mat img;
+  if(!(img=imread("pool1.jpg", 1)).data)
+  {
+      return;
+  }
+  cvtColor(img,img, CV_BGR2HSV);
+  ColorFilter filter(Scalar(h1,s1,v1), Scalar(h2,s2,v2));
+  Mat mask = filter.makeMask(img, false);
+  cvtColor(mask, mask, CV_GRAY2BGR);
+  bitwise_and(img, mask, img);
+  cvtColor(img,img, CV_HSV2BGR);
+  imshow("panel", img);
+}
+
+void startTest()
+{
+  Mat img;
+  if(!(img=imread("pool1.jpg", 1)).data)
+  {
+      return;
+  }
+  
+  imshow("panel", img);
+  
+  namedWindow("slider", 1);
+  createTrackbar("h1", "slider", &h1, 180, updateTest);
+  createTrackbar("s1", "slider", &s1, 255, updateTest);
+  createTrackbar("v1", "slider", &v1, 255, updateTest);
+  createTrackbar("h2", "slider", &h2, 180, updateTest);
+  createTrackbar("s2", "slider", &s2, 255, updateTest);
+  createTrackbar("v2", "slider", &v2, 255, updateTest);
+  waitKey(0);
+}
+
 
 int main(int argc, char* argv[])
 {
-  Mat img, gray, post, anded;
+  Mat img, greyBalls, rawBalls;
   
   if(!(img=imread("pool1.jpg", 1)).data)
   {
-      std::cout << "crap" << std::endl;
       return -1;
   }
-  else
-  {
-      std::cout << "yay" << std::endl;
-  }
+  
+  ColorFilter feltFilter = ColorFilter::load("table.filters")["felt"];
+  map<string, ColorFilter> ballFilters = ColorFilter::load("balls.filters");
   
   cvtColor(img,img, CV_BGR2HSV);
-  inRange(img, Scalar(0, 0, 60), Scalar(180, 100, 200), post);
   
-  bitwise_not(post, post);
+  Mat feltMask = feltFilter.makeMask(img, true);
   
-  cvtColor(post,post, CV_GRAY2BGR);
+  cvtColor(feltMask, feltMask, CV_GRAY2BGR);
   cvtColor(img,img, CV_HSV2BGR);
   
-  bitwise_and(img, post, anded);
+  bitwise_and(img, feltMask, rawBalls);
   
   
-  cvtColor(post, gray, CV_BGR2GRAY);
-  cvtColor(post, post, CV_BGR2GRAY);
+  cvtColor(feltMask, greyBalls, CV_BGR2GRAY);
+  cvtColor(feltMask, feltMask, CV_BGR2GRAY);
   
   // smooth it, otherwise a lot of false circles may be detected
-  GaussianBlur( gray, gray, Size(25, 25), 9, 9 );
-  threshold(gray, gray, 40, 255, THRESH_BINARY);
-  GaussianBlur( gray, gray, Size(9, 9), 2, 2 );
+  GaussianBlur( greyBalls, greyBalls, Size(25, 25), 9, 9 );
+  threshold(greyBalls, greyBalls, 40, 255, THRESH_BINARY);
+  GaussianBlur( greyBalls, greyBalls, Size(9, 9), 2, 2 );
   
   vector<Vec3f> circles;
-  HoughCircles(gray, circles, CV_HOUGH_GRADIENT,
+  HoughCircles(greyBalls, circles, CV_HOUGH_GRADIENT,
                  2, 40, 200, 60, 10, 50 );
 
   for( size_t i = 0; i < circles.size(); i++ )
     {
-         Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
-         int radius = cvRound(circles[i][2]);
-         // draw the circle center
-         circle( anded, center, 3, Scalar(0,255,0), -1, 8, 0 );
-         // draw the circle outline
-         circle( anded, center, radius, Scalar(0,0,255), 3, 8, 0 );
+      Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+      int radius = cvRound(circles[i][2]);
+      // draw the circle center
+      circle( rawBalls, center, 3, Scalar(0,255,0), -1, 8, 0 );
+      // draw the circle outline
+      circle( rawBalls, center, radius, Scalar(0,0,255), 3, 8, 0 );
 	 
-	 // center and radius are the results of HoughCircle
-	// mask is a CV_8UC1 image with 0
-	
-	Mat dst, mask = Mat::zeros( img.rows, img.cols, CV_8UC1 );
-	circle( mask, center, radius, Scalar(255,255,255), -1, 8, 0 ); //-1 means filled
-	bitwise_and(post, mask, mask);
-	img.copyTo( dst, mask ); // copy values of img to dst if mask is > 0.
-	Mat cropped( dst, Rect( center.x-radius, center.y-radius, radius*2, radius*2 ) );
-	
-	imshow("test", cropped);
-	showHistogram(cropped);
-	waitKey(0);
+      // center and radius are the results of HoughCircle
+      // mask is a CV_8UC1 image with 0
+      
+      Mat ball, ballMask = Mat::zeros( img.rows, img.cols, CV_8UC1 );
+      circle( ballMask, center, radius, Scalar(255,255,255), -1, 8, 0 ); //-1 means filled
+      bitwise_and(feltMask, ballMask, ballMask);
+      img.copyTo( ball, ballMask ); // copy values of img to dst if mask is > 0.
+      Mat ballCropped( ball, Rect( center.x-radius, center.y-radius, radius*2, radius*2 ) );
+      
+      int max = 0;
+      string type;
+      map<String, int> colorResults;
+      cvtColor(ballCropped, ballCropped, CV_BGR2HSV);
+      cout << endl << endl << endl;
+      for (map<string, ColorFilter>::iterator i = ballFilters.begin(); i != ballFilters.end(); ++i)
+      {
+        colorResults[i->first] = i->second.countMask(ballCropped);
+        cout << i->first << " - " << colorResults[i->first] << endl;
+        
+        if (i->first != "white" && colorResults[i->first] > max)
+        {
+          max = colorResults[i->first];
+          type = i->first;
+        }
+      }
+      
+      if (colorResults["white"] == 0)
+      {
+        type = "solid " + type;
+        cout << "solid " << type << endl;
+      }
+      else if ((colorResults["white"]) / (float)(max + colorResults["white"]) >= .9)
+      {
+        type = "cue";
+        cout << "cue" << endl;
+      }
+      else if ((colorResults["white"]) / (float)(max + colorResults["white"]) >= .175)
+      {
+        type = "striped " + type;
+        cout << "striped " << type << endl;
+      }
+      else
+      {
+        type = "solid " + type;
+        cout << "solid " << type << endl;
+      }
+      
+      cvtColor(ballCropped, ballCropped, CV_HSV2BGR);
+
+      Point textStart(center.x - 50, center.y - 40);
+      putText(rawBalls, type.c_str(), textStart, 
+             FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(255,255,255), 1, CV_AA);
+      
+      imshow("test", ballCropped);
+      waitKey(0);
     }
     
-//     imshow("img", img);
-//     imshow("gray", gray);
-//     imshow("anded", anded);
-//     showHistogram(img);
-//     waitKey(0);
-//     imwrite( "post.jpg", post );
-//     
-//     imwrite( "anded.jpg", anded );
-//     
-//     imwrite( "gray.jpg", gray );
-//     
-//     imwrite( "img.jpg", img );
-  
+    imshow("img", img);
+    imshow("gray", greyBalls);
+    imshow("anded", rawBalls);
+    
+    waitKey(0);
+    
+    startTest();
     return 0;
-}
-
-void showHistogram(Mat& img)
-{
-	int bins = 256;             // number of bins
-	int nc = img.channels();    // number of channels
-
-	vector<Mat> hist(nc);       // histogram arrays
-
-	// Initalize histogram arrays
-	for (int i = 0; i < hist.size(); i++)
-		hist[i] = Mat::zeros(1, bins, CV_32SC1);
-
-	// Calculate the histogram of the image
-	for (int i = 0; i < img.rows; i++)
-	{
-		for (int j = 0; j < img.cols; j++)
-		{
-			if (!((img.at<Vec3b>(i,j)[0] == 0) && 
-			      (img.at<Vec3b>(i,j)[1] == 0) && 
-			      (img.at<Vec3b>(i,j)[2] == 0)))
-			{
-			for (int k = 0; k < nc; k++)
-			{
-				uchar val = nc == 1 ? img.at<uchar>(i,j) : img.at<Vec3b>(i,j)[k];
-				hist[k].at<int>(val) += 1;
-			}
-			}
-		}
-	}
-	
-
-	// For each histogram arrays, obtain the maximum (peak) value
-	// Needed to normalize the display later
-	int hmax = 0;
-	for (int i = 0; i < nc; i++)
-	{
-		for (int j = 0; j < bins-1; j++)
-			hmax = hist[i].at<int>(j) > hmax ? hist[i].at<int>(j) : hmax;
-	}
-
-	const char* wname[3] = { "blue", "green", "red" };
-	Scalar colors[3] = { Scalar(255,0,0), Scalar(0,255,0), Scalar(0,0,255) };
-
-	vector<Mat> canvas(nc);
-
-	// Display each histogram in a canvas
-	for (int i = 0; i < nc; i++)
-	{
-		canvas[i] = Mat::ones(125, bins, CV_8UC3);
-
-		for (int j = 0, rows = canvas[i].rows; j < bins-1; j++)
-		{
-			line(
-				canvas[i], 
-				Point(j, rows), 
-				Point(j, rows - (hist[i].at<int>(j) * rows/hmax)), 
-				nc == 1 ? Scalar(200,200,200) : colors[i], 
-				1, 8, 0
-			);
-		}
-
-		imshow(nc == 1 ? "value" : wname[i], canvas[i]);
-	}
 }
