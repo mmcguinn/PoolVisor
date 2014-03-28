@@ -1,7 +1,11 @@
+
+
+SOURCES := test.cpp ColorFilter.cpp PoolBall.cpp
+
 all: PoolVisor
 
-PoolVisor: test.cpp
-	g++ -o PoolVisor test.cpp  `pkg-config --cflags --libs opencv`
+PoolVisor: $(SOURCES)
+	g++ -o PoolVisor $(SOURCES)  `pkg-config --cflags --libs opencv`
 	
 clean:
 	rm PoolVisor -f
