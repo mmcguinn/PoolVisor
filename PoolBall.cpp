@@ -8,6 +8,17 @@ PoolBall::PoolBall(Mat img, Mat mask, Vec3f match)
   m_center = Point(cvRound(match[0]), cvRound(match[1]));
   m_radius = cvRound(match[2]);
   
+  // Verify ball is positive in mask
+  if ((int)mask.at<uchar>(m_center.y, m_center.x) == 0)
+  {
+    m_valid = false;
+    return;
+  }
+  else
+  {
+    m_valid = true;
+  }
+  
   Mat ball, ballMask = Mat::zeros( img.rows, img.cols, CV_8UC1 );
   //Mask circle at ball location
   circle(ballMask, m_center, m_radius, Scalar(255,255,255), -1, 8, 0); //-1 means filled
@@ -56,6 +67,9 @@ void PoolBall::markPosition(Mat img)
   {
     circle(img, m_center, 3, Scalar(0,255,0), -1);
     circle(img, m_center, m_radius, Scalar(0,0,255), 3);
+    
+    Point textStart(m_center.x - 50, m_center.y - 40);
+    putText(img, m_type.c_str(), textStart, FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(255,255,255), 1, CV_AA);
   }
 }
 
@@ -69,5 +83,5 @@ void PoolBall::blankPosition(Mat img)
 
 bool PoolBall::isValid()
 {
-  return true;
+  return m_valid;
 }

@@ -12,7 +12,7 @@ class PoolBall
 private:
   Point m_center;
   int m_radius;
-
+  bool m_valid;
   Mat m_cropped;
   string m_type;
 public:
