@@ -25,7 +25,13 @@ PoolBall::PoolBall(Mat img, Mat mask, Vec3f match)
   //Take from img at mask
   img.copyTo(ball, ballMask); // copy values of img to dst if mask is > 0.
   //Crop ball image
-  m_cropped = Mat(ball, Rect(m_center.x-m_radius, m_center.y-m_radius, m_radius*2, m_radius*2));
+  int x = m_center.x-m_radius >= 0 ? m_center.x-m_radius : 0;
+  int y = m_center.y-m_radius >= 0 ? m_center.y-m_radius : 0;
+  int width = x+m_radius*2 < ball.cols ? m_radius*2 : ball.cols-x;
+  int height = y+m_radius*2 < ball.rows ? m_radius*2 : ball.rows-y;
+  cout << x << "," << y << "," << width << "," << height << endl;
+  cout << ball.cols << "," << ball.rows << endl;
+  m_cropped = Mat(ball, Rect(x, y, width, height));
 
   int max = 0;
   map<String, int> colorResults;

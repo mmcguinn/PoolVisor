@@ -4,6 +4,9 @@
 #include <string>
 #include <map>
 
+#ifndef POOLBALL_HPP
+#define POOLBALL_HPP
+
 using namespace cv;
 using namespace std;
 
@@ -22,3 +25,5 @@ public:
   void blankPosition(Mat img);
   bool isValid();
 };
+
+#endif

@@ -6,6 +6,9 @@
 #include <string>
 #include <map>
 
+#ifndef COLORFILTER_HPP
+#define COLORFILTER_HPP
+
 using namespace cv;
 using namespace std;
 
@@ -27,3 +30,5 @@ public:
 };
 
 int colorThreshold(Mat src, Mat dst, Scalar low, Scalar high);
+
+#endif
