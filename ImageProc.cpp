@@ -1,6 +1,6 @@
 #include "ImageProc.hpp"
 
-ImageProc::ImageProc(string source)
+ImageProc::ImageProc(string source, TableState& state) : m_state(state)
 {
   m_feltFilter = ColorFilter::load("table.filters")["felt"];
   m_ballFilters = ColorFilter::load("balls.filters");

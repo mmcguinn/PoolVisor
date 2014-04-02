@@ -9,6 +9,8 @@
 #include "ColorFilter.hpp"
 #include "PoolBall.hpp"
 #include "ImageProc.hpp"
+#include "StreamProc.hpp"
+#include "TableState.hpp"
 
 using namespace cv;
 using namespace std;
@@ -55,10 +57,16 @@ void startTest()
 
 int main(int argc, char* argv[])
 {
-    ImageProc proc("pool%01d.jpg");
+    TableState state(30);
+    
+    //ImageProc proc("pool%01d.jpg", state);
+    //ImageProc proc("rtsp://192.168.0.86:8554/", state);
     //proc.start();
     //proc.join();
-    proc.process();
+    //proc.process();
+    
+    StreamProc streamer("/dev/video0", 640, 480);
+    streamer.process();
     
     startTest();
     return 0;
