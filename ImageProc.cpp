@@ -1,5 +1,30 @@
 #include "ImageProc.hpp"
 
+void medianShift(cv::Mat& src, cv::Mat& dst,
+		 cv::Scalar currentMedian, cv::Scalar targetMedian)
+{
+  src.copyTo(dst);
+  cv::Vec3f normCM;
+  for(int i = 0; i < 3; i++)
+  {
+    normCM[i] = log(currentMedian[i] / 255.0f) / log(targetMedian[i] / 255.0f);
+  }
+  for(int j=0; j<src.cols; j++) {
+    for(int i=0; i<src.rows; i++) {
+      cout << "CurrentMedian: " << currentMedian << endl;
+      cout << "TargetMedian: " << targetMedian << endl;
+      cout << "Beforex: " << dst.at<cv::Vec3b>(i,j) << endl;
+      cout << "Before Rounding: ";
+      for(int c=0; c<3; c++) {
+	cout << pow(src.at<cv::Vec3b>(i,j)[c]/255.0f, normCM[c]) << " ";
+	dst.at<cv::Vec3b>(i,j)[c] = (uint8_t)(pow(src.at<cv::Vec3b>(i,j)[c]/255.0f, normCM[c])*255);
+      }
+      cout << endl;
+      cout << "After: " << dst.at<cv::Vec3b>(i,j) << endl;
+    }
+  }
+}
+
 ImageProc::ImageProc(string source, TableState& state) : m_state(state)
 {
   m_feltFilter = ColorFilter::load("table.filters")["felt"];
@@ -48,7 +73,11 @@ void ImageProc::process()
       lock_guard<mutex> gg(m_readMutex);
       m_nextFrame.copyTo(img);
     }
-    
+    vector<PoolBall> lame;
+    medianShift(img, img, cv::mean(img), cv::Scalar(120,120,120));
+    m_state.addState(img, lame);
+    continue;
+
     cv::Mat imgcpy(img), rawBalls, greyBalls;
     cv::cvtColor(img,img, CV_BGR2HSV);
   
