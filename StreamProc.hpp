@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <cstdlib>
+#include <sys/time.h>
 
 #ifndef STREAMPROC_HPP
 #define STREAMPROC_HPP
@@ -24,11 +25,11 @@ class StreamProc
 {
 private:
   thread m_thread;
-  mutex m_lock;
-  cv::Mat m_transmit, m_buffer;
+  mutex m_mutex;
+  cv::Mat m_transmit, m_nextFrame;
   bool m_newFrame;
   int m_fd, m_frameSize;
-  __u8 m_buffer*;
+  uint8_t *m_buffer;
 public:
   StreamProc(string dst, int height, int width);
   

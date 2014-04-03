@@ -3,9 +3,9 @@
 
 map<string, ColorFilter> ballFilters = ColorFilter::load("balls.filters");
 
-PoolBall::PoolBall(Mat img, Mat mask, Vec3f match)
+PoolBall::PoolBall(cv::Mat img, cv::Mat mask, cv::Vec3f match)
 {
-  m_center = Point(cvRound(match[0]), cvRound(match[1]));
+  m_center = cv::Point(cvRound(match[0]), cvRound(match[1]));
   m_radius = cvRound(match[2]);
   
   // Verify ball is positive in mask
@@ -19,9 +19,9 @@ PoolBall::PoolBall(Mat img, Mat mask, Vec3f match)
     m_valid = true;
   }
   
-  Mat ball, ballMask = Mat::zeros( img.rows, img.cols, CV_8UC1 );
+  cv::Mat ball, ballMask = cv::Mat::zeros( img.rows, img.cols, CV_8UC1 );
   //Mask circle at ball location
-  circle(ballMask, m_center, m_radius, Scalar(255,255,255), -1, 8, 0); //-1 means filled
+  cv::circle(ballMask, m_center, m_radius, cv::Scalar(255,255,255), -1, 8, 0); //-1 means filled
   //Take from img at mask
   img.copyTo(ball, ballMask); // copy values of img to dst if mask is > 0.
   //Crop ball image
@@ -29,18 +29,18 @@ PoolBall::PoolBall(Mat img, Mat mask, Vec3f match)
   int y = m_center.y-m_radius >= 0 ? m_center.y-m_radius : 0;
   int width = x+m_radius*2 < ball.cols ? m_radius*2 : ball.cols-x;
   int height = y+m_radius*2 < ball.rows ? m_radius*2 : ball.rows-y;
-  cout << x << "," << y << "," << width << "," << height << endl;
-  cout << ball.cols << "," << ball.rows << endl;
-  m_cropped = Mat(ball, Rect(x, y, width, height));
+//   cout << x << "," << y << "," << width << "," << height << endl;
+//   cout << ball.cols << "," << ball.rows << endl;
+  m_cropped = cv::Mat(ball, cv::Rect(x, y, width, height));
 
   int max = 0;
-  map<String, int> colorResults;
-  cvtColor(m_cropped, m_cropped, CV_BGR2HSV);
-  cout << endl << endl << endl;
+  map<string, int> colorResults;
+  cv::cvtColor(m_cropped, m_cropped, CV_BGR2HSV);
+  //cout << endl << endl << endl;
   for (map<string, ColorFilter>::iterator i = ballFilters.begin(); i != ballFilters.end(); ++i)
   {
     colorResults[i->first] = i->second.countMask(m_cropped);
-    cout << i->first << " - " << colorResults[i->first] << endl;
+    //cout << i->first << " - " << colorResults[i->first] << endl;
     
     if (i->first != "white" && colorResults[i->first] > max)
     {
@@ -67,23 +67,23 @@ PoolBall::PoolBall(Mat img, Mat mask, Vec3f match)
   }
 }
   
-void PoolBall::markPosition(Mat img)
+void PoolBall::markPosition(cv::Mat img)
 {
   if (isValid())
   {
-    circle(img, m_center, 3, Scalar(0,255,0), -1);
-    circle(img, m_center, m_radius, Scalar(0,0,255), 3);
+    cv::circle(img, m_center, 3, cv::Scalar(0,255,0), -1);
+    cv::circle(img, m_center, m_radius, cv::Scalar(0,0,255), 3);
     
-    Point textStart(m_center.x - 50, m_center.y - 40);
-    putText(img, m_type.c_str(), textStart, FONT_HERSHEY_COMPLEX_SMALL, 0.8, cvScalar(255,255,255), 1, CV_AA);
+    cv::Point textStart(m_center.x - 50, m_center.y - 40);
+    cv::putText(img, m_type.c_str(), textStart, cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, cv::Scalar(255,255,255), 1, CV_AA);
   }
 }
 
-void PoolBall::blankPosition(Mat img)
+void PoolBall::blankPosition(cv::Mat img)
 {
   if (isValid())
   {
-    circle(img, m_center, m_radius+3, Scalar(0,0,0), -1);
+    cv::circle(img, m_center, m_radius+3, cv::Scalar(0,0,0), -1);
   }
 }
 

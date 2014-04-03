@@ -5,6 +5,7 @@ ImageProc::ImageProc(string source, TableState& state) : m_state(state)
   m_feltFilter = ColorFilter::load("table.filters")["felt"];
   m_ballFilters = ColorFilter::load("balls.filters");
   m_video.open(source);
+  m_running = false;
   
   ifstream input("imageproc.cfg", ifstream::in);
   
@@ -20,6 +21,7 @@ ImageProc::ImageProc(string source, TableState& state) : m_state(state)
   
 void ImageProc::start()
 {
+  cout << "START - IMAGE" << endl;
   m_thread = thread(&ImageProc::process, this);
 }
 
@@ -30,29 +32,42 @@ void ImageProc::join()
 
 void ImageProc::process()
 {
-  Mat img;
+  cout << "image begin" << endl;
+  cv::Mat img;
   
-  while (m_video.read(img))
+  m_readThread = thread(&ImageProc::frameSkipper, this);
+  
+  while (!m_running)
   {
-    Mat imgcpy(img), rawBalls, greyBalls;
-    cvtColor(img,img, CV_BGR2HSV);
+    sleep(1);
+  }
   
-    Mat feltMask = m_feltFilter.makeMask(img, true);
+  while (1)
+  {
+    {
+      lock_guard<mutex> gg(m_readMutex);
+      m_nextFrame.copyTo(img);
+    }
     
-    cvtColor(feltMask, feltMask, CV_GRAY2BGR);
-    cvtColor(img,img, CV_HSV2BGR);
+    cv::Mat imgcpy(img), rawBalls, greyBalls;
+    cv::cvtColor(img,img, CV_BGR2HSV);
+  
+    cv::Mat feltMask = m_feltFilter.makeMask(img, true);
     
-    bitwise_and(img, feltMask, rawBalls);
+    cv::cvtColor(feltMask, feltMask, CV_GRAY2BGR);
+    cv::cvtColor(img,img, CV_HSV2BGR);
     
-    cvtColor(feltMask, greyBalls, CV_BGR2GRAY);
-    cvtColor(feltMask, feltMask, CV_BGR2GRAY);
+    cv::bitwise_and(img, feltMask, rawBalls);
+    
+    cv::cvtColor(feltMask, greyBalls, CV_BGR2GRAY);
+    cv::cvtColor(feltMask, feltMask, CV_BGR2GRAY);
     
     vector<PoolBall> balls, newBalls;
     do
     {
       newBalls = findBalls(img, greyBalls);
       
-      Mat tmp = rawBalls.clone();
+      cv::Mat tmp = rawBalls.clone();
       for (vector<PoolBall>::iterator i = newBalls.begin(); i != newBalls.end(); i++)
       {
 	balls.push_back(*i);
@@ -61,8 +76,8 @@ void ImageProc::process()
 	i->markPosition(tmp);
       }
       
-      imshow("anded", tmp);
-      waitKey(0);
+      //cv::imshow("anded", tmp);
+      //cv::waitKey(0);
       
     } while (newBalls.size() > 0);
     
@@ -71,34 +86,47 @@ void ImageProc::process()
     {
       i->markPosition(imgcpy);
     }
-    imshow("anded", imgcpy);
-    waitKey(0);
+    //cv::imshow("anded", imgcpy);
+    //cv::waitKey(0);
+    m_state.addState(img, balls);
+    
+    cv::imwrite("ori.jpg", imgcpy);
   }
   
   
   //Do something
 }
 
-vector<PoolBall> ImageProc::findBalls(Mat img, Mat oriMask)
+vector<PoolBall> ImageProc::findBalls(cv::Mat img, cv::Mat oriMask)
 {
-  Mat mask = oriMask.clone();
-  morphologyEx(mask, mask, MORPH_OPEN, 
-	       getStructuringElement(MORPH_ELLIPSE, cvSize(m_conf["noise_floor"],
-							   m_conf["noise_floor"])));
-  morphologyEx(mask, mask, MORPH_CLOSE, 
-	       getStructuringElement(MORPH_ELLIPSE, cvSize(m_conf["fill_width"],
-							   m_conf["fill_width"])));
-  morphologyEx(mask, mask, MORPH_OPEN, 
-	       getStructuringElement(MORPH_ELLIPSE, cvSize(m_conf["exp_ball_width"],
-							   m_conf["exp_ball_width"])));
-  GaussianBlur(mask, mask, Size(9, 9), 2, 2 );
+  cv::Mat mask = oriMask.clone();
+  cv::morphologyEx(mask, mask, cv::MORPH_OPEN, 
+		   getStructuringElement(cv::MORPH_ELLIPSE, 
+					 cv::Size(m_conf["noise_floor"], 
+						  m_conf["noise_floor"])));
+  cv::morphologyEx(mask, mask, cv::MORPH_CLOSE, 
+		   getStructuringElement(cv::MORPH_ELLIPSE, 
+					 cv::Size(m_conf["fill_width"], 
+						  m_conf["fill_width"])));
+  cv::morphologyEx(mask, mask, cv::MORPH_OPEN, 
+		   getStructuringElement(cv::MORPH_ELLIPSE, 
+					 cv::Size(m_conf["exp_ball_width"], 
+						  m_conf["exp_ball_width"])));
+  cv::GaussianBlur(mask, mask, cv::Size(9, 9), 2, 2 );
   
-  imshow("gray", mask);
+  //cv::imshow("gray", mask)
+  static int frameNum = 0;
+  frameNum++;
+  char filename[256];
+  sprintf(filename, "dump/mask%02d.jpg", frameNum);
+  cv::imwrite(filename, mask);
+  sprintf(filename, "dump/img%02d.jpg", frameNum);
+  cv::imwrite(filename, img);
   
   vector<PoolBall> results;
-  vector<Vec3f> circles;
-  HoughCircles(mask, circles, CV_HOUGH_GRADIENT, 2, m_conf["min_ball_radius"], 200, 60, 
-	       m_conf["min_ball_radius"], m_conf["max_ball_radius"]);
+  vector<cv::Vec3f> circles;
+  cv::HoughCircles(mask, circles, CV_HOUGH_GRADIENT, 2, m_conf["min_ball_radius"], 200, 60, 
+		   m_conf["min_ball_radius"], m_conf["max_ball_radius"]);
   
   for( size_t i = 0; i < circles.size(); i++)
   {
@@ -110,4 +138,19 @@ vector<PoolBall> ImageProc::findBalls(Mat img, Mat oriMask)
   }
   
   return results;
+}
+
+void ImageProc::frameSkipper()
+{
+  bool run = true;
+  while (run)
+  {
+    {
+      lock_guard<mutex> gg(m_readMutex);
+      run = m_video.read(m_nextFrame);
+    }
+    m_running = true;
+    
+    usleep(1000);
+  }
 }

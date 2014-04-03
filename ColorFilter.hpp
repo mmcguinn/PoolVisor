@@ -9,26 +9,25 @@
 #ifndef COLORFILTER_HPP
 #define COLORFILTER_HPP
 
-using namespace cv;
 using namespace std;
 
 class ColorFilter
 {
 private:
-  Scalar m_low, m_high;
+  cv::Scalar m_low, m_high;
 public:
   ColorFilter();
-  ColorFilter(Scalar low, Scalar high);
+  ColorFilter(cv::Scalar low, cv::Scalar high);
   
   static map<string, ColorFilter> load(string filename);
   
-  Mat makeMask(Mat input, bool invert);
+  cv::Mat makeMask(cv::Mat input, bool invert);
   
-  int countMask(Mat input);
+  int countMask(cv::Mat input);
   
   void test();
 };
 
-int colorThreshold(Mat src, Mat dst, Scalar low, Scalar high);
+int colorThreshold(cv::Mat src, cv::Mat dst, cv::Scalar low, cv::Scalar high);
 
 #endif

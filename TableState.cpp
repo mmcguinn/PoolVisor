@@ -6,9 +6,10 @@ TableState::TableState(int historySize)
   m_fresh = false;
 }
   
-void TableState::addState(Mat img, vector<PoolBall> balls)
+void TableState::addState(cv::Mat img, vector<PoolBall> balls)
 {
   lock_guard<mutex> gg(m_mutex);
+  cout << "ADDING FRAME " << img.cols << " " << img.rows << endl;
   
   m_imgs.push_front(img);
   m_balls.push_front(balls);
@@ -26,7 +27,7 @@ void TableState::addState(Mat img, vector<PoolBall> balls)
   m_fresh = true;
 }
 
-bool TableState::getState(Mat& img, vector<PoolBall>& balls, int age)
+bool TableState::getState(cv::Mat& img, vector<PoolBall>& balls, int age)
 {
   lock_guard<mutex> gg(m_mutex);
   
@@ -49,9 +50,11 @@ bool TableState::getState(Mat& img, vector<PoolBall>& balls, int age)
   }
   
   m_fresh = false;
+  
+  return true;
 }
 
-bool TableState::getNewState(Mat& img, vector<PoolBall>& balls)
+bool TableState::getNewState(cv::Mat& img, vector<PoolBall>& balls)
 {
   if (m_fresh)
   {

@@ -2,7 +2,7 @@
 
 ColorFilter::ColorFilter() {}
 
-ColorFilter::ColorFilter(Scalar low, Scalar high)
+ColorFilter::ColorFilter(cv::Scalar low, cv::Scalar high)
 {
   m_low = low;
   m_high = high;
@@ -19,29 +19,29 @@ map<string, ColorFilter> ColorFilter::load(string filename)
   while (input.good())
   {
     input >> name >> h1 >> s1 >> v1 >> dc >> h2 >> s2 >> v2;
-    result[name] = ColorFilter(Scalar(h1,s1,v1), Scalar(h2,s2,v2));
+    result[name] = ColorFilter(cv::Scalar(h1,s1,v1), cv::Scalar(h2,s2,v2));
   }
   
   return result;
 }
 
-Mat ColorFilter::makeMask(Mat input, bool invert = false)
+cv::Mat ColorFilter::makeMask(cv::Mat input, bool invert = false)
 {
-  Mat result = Mat::zeros( input.rows, input.cols, CV_8UC1 );
+  cv::Mat result = cv::Mat::zeros( input.rows, input.cols, CV_8UC1 );
   
   colorThreshold(input, result, m_low, m_high);
 		  
   if (invert)
   {
-      bitwise_not(result, result);
+      cv::bitwise_not(result, result);
   }
   
   return result;
 }
 
-int ColorFilter::countMask(Mat input)
+int ColorFilter::countMask(cv::Mat input)
 {
-  Mat result = Mat::zeros( input.rows, input.cols, CV_8UC1 );
+  cv::Mat result = cv::Mat::zeros( input.rows, input.cols, CV_8UC1 );
   
   return colorThreshold(input, result, m_low, m_high);
 }
@@ -52,7 +52,7 @@ void ColorFilter::test()
 }
 
 
-int colorThreshold(Mat src, Mat dst, Scalar low, Scalar high)
+int colorThreshold(cv::Mat src, cv::Mat dst, cv::Scalar low, cv::Scalar high)
 {
     bool wrap = low.val[0] > high.val[0];
     int ret = 0;
