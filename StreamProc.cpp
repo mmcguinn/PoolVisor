@@ -98,9 +98,9 @@ void StreamProc::process()
       }
       cout << ".";
       if (write(m_fd, m_buffer, m_frameSize) != m_frameSize)
-      {	
-	cerr << "BAD WRITE" << endl;
-      }
+	{	
+	  cerr << "BAD WRITE" << endl;
+	}
     }
     else
     {

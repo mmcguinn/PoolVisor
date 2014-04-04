@@ -7,20 +7,25 @@ void medianShift(cv::Mat& src, cv::Mat& dst,
   cv::Vec3f normCM;
   for(int i = 0; i < 3; i++)
   {
-    normCM[i] = log(currentMedian[i] / 255.0f) / log(targetMedian[i] / 255.0f);
+    normCM[i] = log(targetMedian[i] / 255.0f) / log(currentMedian[i] / 255.0f);
   }
   for(int j=0; j<src.cols; j++) {
     for(int i=0; i<src.rows; i++) {
+      /*
       cout << "CurrentMedian: " << currentMedian << endl;
       cout << "TargetMedian: " << targetMedian << endl;
       cout << "Beforex: " << dst.at<cv::Vec3b>(i,j) << endl;
       cout << "Before Rounding: ";
+      */
       for(int c=0; c<3; c++) {
-	cout << pow(src.at<cv::Vec3b>(i,j)[c]/255.0f, normCM[c]) << " ";
+	//cout << pow(src.at<cv::Vec3b>(i,j)[c]/255.0f, normCM[c]) << " ";
 	dst.at<cv::Vec3b>(i,j)[c] = (uint8_t)(pow(src.at<cv::Vec3b>(i,j)[c]/255.0f, normCM[c])*255);
       }
+      /*
       cout << endl;
       cout << "After: " << dst.at<cv::Vec3b>(i,j) << endl;
+      cout << endl;
+      */
     }
   }
 }
@@ -74,9 +79,20 @@ void ImageProc::process()
       m_nextFrame.copyTo(img);
     }
     vector<PoolBall> lame;
+
+    // --- //
+    //static int frameNum = 0;
+    //char filename[256];
+    //frameNum++;
+    //sprintf(filename, "dump/before%02d.jpg", frameNum);
+    //cv::imwrite(filename, img);
     medianShift(img, img, cv::mean(img), cv::Scalar(120,120,120));
-    m_state.addState(img, lame);
-    continue;
+    //sprintf(filename, "dump/after%02d.jpg", frameNum);
+    //cv::imwrite(filename, img);
+    // --- //
+
+    //m_state.addState(img, lame);
+    //continue;
 
     cv::Mat imgcpy(img), rawBalls, greyBalls;
     cv::cvtColor(img,img, CV_BGR2HSV);
@@ -154,7 +170,7 @@ vector<PoolBall> ImageProc::findBalls(cv::Mat img, cv::Mat oriMask)
   
   vector<PoolBall> results;
   vector<cv::Vec3f> circles;
-  cv::HoughCircles(mask, circles, CV_HOUGH_GRADIENT, 2, m_conf["min_ball_radius"], 200, 60, 
+  cv::HoughCircles(mask, circles, CV_HOUGH_GRADIENT, 3, m_conf["min_ball_radius"], 200, 60, 
 		   m_conf["min_ball_radius"], m_conf["max_ball_radius"]);
   
   for( size_t i = 0; i < circles.size(); i++)
