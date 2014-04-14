@@ -62,6 +62,7 @@ void startTest()
 
 int main(int argc, char* argv[])
 {
+  /*
     TableState state(30);
     
     ImageProc iproc("/dev/stdin", state);
@@ -72,10 +73,21 @@ int main(int argc, char* argv[])
     
     lproc.join();
     iproc.join();
+  */
     
-    StreamProc streamer("/dev/video0", 640, 480);
-    streamer.process();
-    
-    startTest();
-    return 0;
+  cv::VideoCapture input("/dev/stdin");
+  cv::Mat frame;
+  
+  input.read(frame);
+  
+  StreamProc streamer("/dev/video0", frame.cols, frame.rows);
+  
+  streamer.start();
+  
+  while(input.read(frame)) {
+    streamer.inputFrame(frame);
+  }
+  
+  //startTest();
+  return 0;
 }
