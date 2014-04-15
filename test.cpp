@@ -65,16 +65,16 @@ int main(int argc, char* argv[])
     TableState state(30);
     
     ImageProc iproc("/dev/stdin", state);
-    iproc.start();
+    iproc.process();
     
-    LogicProc lproc("/dev/video0", state);
-    lproc.start();
+//     LogicProc lproc("/dev/video0", state);
+//     lproc.start();
     
-    lproc.join();
-    iproc.join();
-    
-    StreamProc streamer("/dev/video0", 640, 480);
-    streamer.process();
+//     lproc.join();
+//     iproc.join();
+//     
+//     StreamProc streamer("/dev/video0", 640, 480);
+//     streamer.process();
     
     startTest();
     return 0;
