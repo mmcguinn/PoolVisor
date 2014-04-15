@@ -15,9 +15,9 @@ bool Process::requestInputs(list<string> requests, map<string, GenericPipe> &sto
   for (list<string>::iterator i = requests.begin(); i != requests.end(); i++)
   {
     
-    if (m_output.count(*i) == 1 && m_output[*i].ready())
+    if (m_outputs.count(*i) == 1 && m_outputs[*i].ready())
     {
-      storage[*i] = m_output[*i].clone();
+      storage[*i] = m_outputs[*i].clone();
     }
     else
     {
@@ -31,11 +31,11 @@ bool Process::requestInputs(list<string> requests, map<string, GenericPipe> &sto
 
 bool Process::getInputs()
 {
-  m_input.erase(m_input.begin(), m_input.end());
+  m_inputs.erase(m_inputs.begin(), m_inputs.end());
   
-  for (map<Process&, list<string> >::iterator i = m_inputMap.begin(); i != m_inputMap.end(); i++)
+  for (map<Process&, list<string> >::iterator i = m_inputMap->begin(); i != m_inputMap->end(); i++)
   {
-    if (!(i->first.requestInputs(i->second, m_input)))
+    if (!(i->first->requestInputs(i->second, m_inputs)))
     {
       return false;
     }
@@ -58,9 +58,9 @@ void Process::setOutputs()
   
 }
 
-void Process::start(map<Pipe&, list<string> > inputs)
+void Process::start(map<GenericPipe*, list<string> > inputs)
 {
-  m_inputs = inputs;
+  m_inputMap = inputs;
   m_run = true;
   m_thread = thread(&Process::process, this);
 }

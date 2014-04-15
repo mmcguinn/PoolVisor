@@ -6,15 +6,18 @@
 class GenericPipe
 {
 public:
-  AbstractOutput() : m_ready(false) {}
+  GenericPipe() : m_ready(false) {}
   
-  bool ready() {return m_ready}
+  bool ready() 
+  {
+    return m_ready;
+  }
   
-  virtual AbstractOutput clone();
+  virtual GenericPipe clone();
   
 protected:
   bool m_ready;
-}
+};
 
 template <typename T>
 class Pipe : public GenericPipe
@@ -31,7 +34,7 @@ public:
     {
       slot = m_val;
     }
-    return m_ready
+    return m_ready;
   }
   
   void set(T& input)
@@ -45,10 +48,10 @@ public:
     Pipe<T> cpy;
     if (cpy.ready())
     {
-      cpy.set(m_val)
+      cpy.set(m_val);
     }
   }
-}
+};
 
 template <>
 class Pipe<cv::Mat> : public GenericPipe
@@ -61,11 +64,11 @@ public:
   
   bool get(cv::Mat& slot)
   {
-    if (m_ready())
+    if (ready())
     {
       m_val.copyTo(slot);
     }
-    return m_ready
+    return ready();
   }
   
   void set(cv::Mat& input)
@@ -79,9 +82,9 @@ public:
     Pipe<cv::Mat> cpy;
     if (cpy.ready())
     {
-      cpy.set(m_val)
+      cpy.set(m_val);
     }
   }
-}
+};
 
 #endif

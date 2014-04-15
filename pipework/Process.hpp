@@ -10,6 +10,7 @@
 #define PROCESS_HPP
 
 using namespace std;
+using namespace boost;
 
 class Process
 {
@@ -21,7 +22,7 @@ protected:
   void setOutputs();
   void process();
   
-  map<Pipe&, list<string> > m_inputMap;
+  map<Process*, list<string> > m_inputMap;
   map<string, GenericPipe> m_inputs, m_wip, m_outputs;
   
   thread m_thread;
@@ -31,13 +32,11 @@ public:
   Process();
   ~Process();
   
-  bool requestInputs(list<string> requests, map<string, Pipe> &storage);
+  bool requestInputs(list<string> requests, map<string, GenericPipe> &storage);
   
-  void start(map<Pipe&, list<string> > inputs);
+  void start(map<Process*, list<string> > inputs);
   void stop();
   void join();
-  
-  
-}
+};
 
 #endif
