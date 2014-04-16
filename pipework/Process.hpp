@@ -15,15 +15,15 @@ using namespace boost;
 class Process
 {
 protected:
-  virtual void init();
-  virtual void work();
+  virtual void init() {}
+  virtual void work() {}
   
   bool getInputs();
   void setOutputs();
   void process();
   
-  map<Process*, list<string> > m_inputMap;
-  map<string, GenericPipe> m_inputs, m_wip, m_outputs;
+  map<Process*, list<pair<string,string> > > m_inputMap;
+  map<string, GenericPipe*> m_inputs, m_wip, m_outputs;
   
   thread m_thread;
   mutex m_outputLock;
@@ -32,9 +32,11 @@ public:
   Process();
   ~Process();
   
-  bool requestInputs(list<string> requests, map<string, GenericPipe> &storage);
+  bool requestInputs(list<pair<string, string> > requests, map<string, GenericPipe*> &storage);
   
-  void start(map<Process*, list<string> > inputs);
+  void start(map<Process*, list<pair<string,string> > > inputs);
+  void start();
+  
   void stop();
   void join();
 };

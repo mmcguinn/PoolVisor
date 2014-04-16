@@ -8,16 +8,17 @@ Process::~Process()
   join();
 }
 
-bool Process::requestInputs(list<string> requests, map<string, GenericPipe> &storage)
+//Caller requests copys of callee's outputs.
+bool Process::requestInputs(list<pair<string, string> > requests, map<string, GenericPipe*> &storage)
 {
   lock_guard<mutex> gg(m_outputLock);
   
-  for (list<string>::iterator i = requests.begin(); i != requests.end(); i++)
+  for (list<pair<string,string> >::iterator i = requests.begin(); i != requests.end(); i++)
   {
     
-    if (m_outputs.count(*i) == 1 && m_outputs[*i].ready())
+    if (m_outputs.count(i->first) == 1 && m_outputs[i->first]->ready())
     {
-      storage[*i] = m_outputs[*i].clone();
+      storage[i->second] = m_outputs[i->first]->clone();
     }
     else
     {
@@ -29,11 +30,16 @@ bool Process::requestInputs(list<string> requests, map<string, GenericPipe> &sto
   return true;
 }
 
+//Ask designated input processes for copies of output
 bool Process::getInputs()
 {
+  for (map<string, GenericPipe*>::iterator i = m_inputs.begin(); i != m_inputs.end(); i++)
+  {
+    delete i->second;
+  }
   m_inputs.erase(m_inputs.begin(), m_inputs.end());
   
-  for (map<Process&, list<string> >::iterator i = m_inputMap->begin(); i != m_inputMap->end(); i++)
+  for (map<Process*, list<pair<string, string> > >::iterator i = m_inputMap.begin(); i != m_inputMap.end(); i++)
   {
     if (!(i->first->requestInputs(i->second, m_inputs)))
     {
@@ -44,44 +50,60 @@ bool Process::getInputs()
   return true;
 }
 
+//Copy current wip into output buffer
 void Process::setOutputs()
 {
   lock_guard<mutex> gg(m_outputLock);
-  m_output.erase(m_output.begin(), m_output.end());
   
-  for (map<string, GenericPipe>::iterator i = m_wip.begin(); i != m_wip.end(); i++)
+  // Delete current outputs
+  for (map<string, GenericPipe*>::iterator i = m_outputs.begin(); i != m_outputs.end(); i++)
   {
-    m_output[i->first] = i->second.clone();
+    delete i->second;
   }
+  m_outputs.erase(m_outputs.begin(), m_outputs.end());
   
+  // Copy in wip and clear wip
+  for (map<string, GenericPipe*>::iterator i = m_wip.begin(); i != m_wip.end(); i++)
+  {
+    m_outputs[i->first] = i->second->clone();
+  }
   m_wip.erase(m_wip.begin(), m_wip.end());
   
 }
 
-void Process::start(map<GenericPipe*, list<string> > inputs)
+//Start process thread
+void Process::start(map<Process*, list<pair<string, string> > > inputs)
 {
   m_inputMap = inputs;
   m_run = true;
   m_thread = thread(&Process::process, this);
 }
+void Process::start()
+{
+  m_run = true;
+  m_thread = thread(&Process::process, this);
+}
 
+//Request thread stop
 void Process::stop()
 {
   m_run = false;
 }
 
+//Join thread. Should call stop first to avoid lockup.
 void Process::join()
 {
   m_thread.join();
 }
 
-Process::process() 
+//Process logic, calls init and then loops through in->work->out
+void Process::process() 
 {
   init();
   
   while (m_run)
   {
-    if (getInputs(m_inputMap))
+    if (getInputs())
     {
       work();
       setOutputs();

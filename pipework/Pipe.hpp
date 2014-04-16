@@ -13,7 +13,7 @@ public:
     return m_ready;
   }
   
-  virtual GenericPipe clone();
+  virtual GenericPipe* clone() {};
   
 protected:
   bool m_ready;
@@ -43,12 +43,12 @@ public:
     m_ready = true;
   }
   
-  virtual Pipe<T> clone()
+  Pipe<T>* clone()
   {
-    Pipe<T> cpy;
-    if (cpy.ready())
+    Pipe<T> *cpy = new Pipe<T>();
+    if (ready())
     {
-      cpy.set(m_val);
+      cpy->set(m_val);
     }
   }
 };
@@ -77,12 +77,12 @@ public:
     m_ready = true;
   }
   
-  virtual Pipe<cv::Mat> clone()
+  Pipe<cv::Mat>* clone()
   {
-    Pipe<cv::Mat> cpy;
-    if (cpy.ready())
+    Pipe<cv::Mat>* cpy = new Pipe<cv::Mat>;
+    if (ready())
     {
-      cpy.set(m_val);
+      cpy->set(m_val);
     }
   }
 };
